@@ -67,7 +67,7 @@ h1, h2, h3, .brand-card-title, .brand-card-name, .gauge-value, .power-status { f
 .brand-card-ecg { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .82; }
 .brand-card-ecg svg { position: absolute; inset: 19px 0 auto; width: 100%; height: 84px; overflow: visible; }
 .brand-card-ecg path { fill: none; stroke: rgb(46 187 255 / 35%); stroke-width: 2; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 5px rgb(20 165 255 / 70%)); stroke-dasharray: 14 9; animation: ecg-trace 2.4s linear infinite; }
-.brand-card-ecg circle { fill: #d9fbff; stroke: #26baff; stroke-width: 4; filter: drop-shadow(0 0 5px #20bfff) drop-shadow(0 0 15px rgb(32 191 255 / 90%)); offset-path: path('M0 70 C85 70 92 70 112 70 C132 70 138 22 154 22 C170 22 176 118 192 118 C208 118 214 70 234 70 H1000'); offset-distance: 0%; animation: pulse-wave 3.4s linear infinite; }
+.brand-card-ecg circle { fill: #d9fbff; stroke: #26baff; stroke-width: 4; filter: drop-shadow(0 0 5px #20bfff) drop-shadow(0 0 15px rgb(32 191 255 / 90%)); offset-path: path('M0 42 C80 8 160 76 240 42 S400 8 480 42 S640 76 720 42 S880 8 1000 42'); offset-distance: 0%; animation: pulse-wave 3.4s linear infinite; }
 @keyframes rainbow-wave { 0% { background-position: -120% center; } 100% { background-position: 220% center; } }
 @keyframes ecg-trace { to { stroke-dashoffset: -46; } }
 @keyframes pulse-wave { 0% { offset-distance: 0%; opacity: 0; transform: scale(.55); } 7% { opacity: 1; transform: scale(1.1); } 12% { transform: scale(1.55); } 20% { transform: scale(.95); } 100% { offset-distance: 100%; opacity: 0; transform: scale(.65); } }
