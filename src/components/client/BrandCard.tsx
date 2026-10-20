@@ -11,7 +11,7 @@ export function BrandCard({ compact = false }: { compact?: boolean }) {
       </svg>
     </span>
     <img className="brand-card-logo" src="/aiv2ray-logo.png" alt="" />
-    <span className="brand-card-title">AI V2RAY CLIENT</span>
+    <span className="brand-card-title">AIv2ray</span>
     <span className="brand-card-subtitle">PRECISION TUNNEL ENGINE <b>■</b> XRAY CORE V1.8.16</span>
     <span className="brand-card-footer"><strong>DEVELOPED BY VICTOR GEEK</strong><span>TILT X: 0° Y: 0°</span></span>
   </div>;

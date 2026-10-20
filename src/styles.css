@@ -697,3 +697,36 @@ body { background: #f8fafc; color: #0f172a; }
 .connection-footer, .chassis-footer, .below-chassis { color: #64748b; }
 .ai-badge, .manage-link { color: #0369a1; }
 @media (max-width: 700px) { .client-stage { padding: 10px 8px 24px; }.client-chassis { padding: 12px 10px 0; }.brand-card { min-height: 132px; }.brand-card-title { font-size: clamp(24px, 7vw, 34px); }.brand-card-subtitle { font-size: 8px; }.brand-card-footer { font-size: 9px; }.instrument-nav { border-radius: 12px; }.steel-tray, .control-deck, .active-server { border-radius: 14px; } }
+
+/* Accessible light steel interface */
+:root { --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --font-display: Inter, ui-sans-serif, system-ui, sans-serif; --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+body { font-family: var(--font-sans); background: #eef3f7; color: #172536; }
+.client-stage { max-width: none; width: 100%; padding: 20px clamp(12px, 3vw, 40px) 32px; background: linear-gradient(180deg, #f7fafc 0%, #e7eef3 100%); }
+.outer-brand { max-width: 1180px; color: #526578; letter-spacing: .1em; }
+.client-chassis { max-width: 1180px; background: linear-gradient(145deg, #fdfefe, #e7edf2); border: 1px solid #b8c7d3; box-shadow: 0 18px 44px rgb(30 54 72 / 14%), inset 0 1px 0 #fff; }
+.brand-card { min-height: 164px; overflow: hidden; background: linear-gradient(135deg, #fbfdff 0%, #dbe7ef 48%, #f8fbfd 100%); border: 1px solid #aebfcd; box-shadow: inset 0 1px 0 #fff, 0 12px 24px rgb(61 88 108 / 14%); }
+.brand-card::before { display: block; z-index: 0; background: linear-gradient(105deg, transparent 10%, rgb(255 73 181 / 14%) 35%, rgb(45 205 255 / 20%) 52%, rgb(255 205 74 / 14%) 68%, transparent 90%); background-size: 220% 100%; animation: rainbow-sheen 5s linear infinite; }
+.brand-card::after { border-color: rgb(93 128 151 / 30%); }
+.brand-card-title { z-index: 3; color: transparent; font-family: var(--font-display); font-size: clamp(38px, 7vw, 76px); font-weight: 800; letter-spacing: .04em; text-transform: none; background: linear-gradient(90deg, #ef476f, #f7b32b, #16b8a6, #2087e8, #9b5de5, #ef476f); background-size: 240% auto; -webkit-background-clip: text; background-clip: text; animation: wordmark-flow 6s linear infinite; filter: drop-shadow(0 2px 1px rgb(255 255 255 / 80%)); }
+.brand-card-logo { z-index: 3; width: 52px; height: 52px; }
+.brand-card-subtitle, .brand-card-footer { z-index: 3; color: #445a6c; font-family: var(--font-mono); }
+.brand-card-footer strong { color: #1769aa; }
+.brand-card-ecg { z-index: 2; opacity: 1; }
+.brand-card-ecg svg { top: 42px; height: 78px; }
+.brand-card-ecg path { stroke: #1d9ee8; stroke-width: 2; opacity: .48; stroke-dasharray: 6 11; animation: wave-drift 2.4s linear infinite; filter: drop-shadow(0 0 3px rgb(29 158 232 / 70%)); }
+.brand-card-ecg circle { r: 8; fill: #0b9ee8; stroke: #b7f1ff; stroke-width: 3; animation: wave-dot 3.8s linear infinite; }
+.instrument-nav { background: rgb(222 231 237 / 78%); border-color: #b8c8d4; box-shadow: inset 0 1px 3px rgb(52 76 93 / 12%); }
+.nav-key { color: #405568; }.nav-active { color: #096da8; background: #fff; border-color: #b5d9ed; }
+.steel-tray, .control-deck, .active-server { background: rgb(255 255 255 / 64%); border-color: #b9cbd7; box-shadow: 0 10px 24px rgb(46 73 91 / 12%), inset 0 1px 0 #fff; backdrop-filter: blur(14px); }
+.engraved-input, .api-field { background: rgb(248 251 253 / 88%); color: #172536; border-color: #b8cbd8; }
+.keycap { background: rgb(255 255 255 / 70%); color: #344b5d; border-color: #b9cbd7; }.keycap:hover, .chip-active { color: #076ca8; background: #e4f6ff; border-color: #69c8ef; }
+.copper-button { background: linear-gradient(135deg, #ffd166, #ef8b2c 48%, #ef476f); color: #fff; border-color: #e77a37; }
+.control-deck .instrument, .control-deck .power-control { background: rgb(245 249 251 / 82%); border-color: #b9cbd7; box-shadow: 0 5px 14px rgb(46 73 91 / 12%); }
+.control-deck .power-button { background: linear-gradient(145deg, #e8fbff, #c5eef8); border-color: #45bce8; }
+.telemetry-strip { background: rgb(248 251 253 / 82%); border-color: #b9cbd7; }.telemetry-strip strong { color: #0874ae; }
+.connection-footer, .chassis-footer, .below-chassis { color: #526578; }
+@keyframes rainbow-sheen { to { background-position: -220% 0; } }
+@keyframes wordmark-flow { to { background-position: -240% center; } }
+@keyframes wave-drift { to { stroke-dashoffset: -34; } }
+@keyframes wave-dot { 0% { offset-distance: 0%; opacity: .2; transform: scale(.55); } 8% { opacity: 1; transform: scale(1.25); } 18% { transform: scale(.85); } 100% { offset-distance: 100%; opacity: .15; transform: scale(.55); } }
+@media (prefers-reduced-motion: reduce) { .brand-card-title, .brand-card::before, .brand-card-ecg path, .brand-card-ecg circle { animation: none; } }
