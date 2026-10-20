@@ -534,3 +534,66 @@ h1 { font-weight: 800; font-size: 29px; color: var(--engrave-copper); text-shado
  .language-my .welcome-description { font-size: 11px; }
  .language-my .welcome-copy { padding-inline: 22px; }
 }
+
+/* Reference-inspired mobile dashboard order and instrument-panel styling. */
+.connection-content { display: flex; flex-direction: column; }
+.connection-content > .control-deck { order: 1; }
+.connection-content > .section-heading { order: 2; }
+.connection-content > .active-server { order: 3; }
+.connection-content > .ai-tray { order: 4; }
+.connection-content > .telemetry-strip { order: 5; }
+.connection-content > .connection-footer { order: 6; }
+
+@media (max-width: 430px) {
+  .client-stage { min-height: 100dvh; padding: 0 13px 14px; background: var(--metal-gradient); }
+  .ambient-metal { opacity: .2; }
+  .outer-brand { margin: 0 8px 14px; height: 32px; gap: 8px; font-size: 8px; }
+  .outer-brand .micro-label { font-size: 5px; }
+  .client-chassis { padding: 15px 0 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .chassis-texture { inset: 0; width: 100%; height: 100%; opacity: .06; border-radius: 0; }
+  .client-chassis .screw { display: none; }
+  .client-header { padding: 0 0 14px; justify-content: center; }
+  .client-identity { width: 100%; justify-content: center; }
+  .brand-card { width: 100%; min-height: 82px; justify-content: center; gap: 8px; padding: 10px 12px; border-radius: 15px; background: linear-gradient(120deg, #eef3f7, #f7eef2 52%, #e9f4f2); box-shadow: inset 0 2px 4px #fff, 0 4px 8px #8d989e; }
+  .brand-card::before { opacity: .45; }
+  .brand-card-icon { width: 38px; height: 38px; }
+  .brand-card-name { font-size: 22px; color: #c8751e; text-shadow: 1px 2px 0 #f2d6aa; }
+  .status-badge { display: none; }
+  .instrument-nav { margin: 0 0 18px; padding: 4px; gap: 5px; border: 0; background: transparent; box-shadow: none; }
+  .nav-key { height: 38px; font-size: 9px; border-radius: 10px; }
+  .nav-key svg { display: none; }
+  .control-deck { margin: 0; padding: 16px 10px 13px; border-radius: 16px; background: linear-gradient(145deg, #b6c2c6, #dce5e7 50%, #a9b5b9); box-shadow: inset 0 2px 5px #f8ffff, inset 0 -4px 8px #7d8b90, 0 4px 8px #879398; }
+  .control-deck .deck-heading { display: none; }
+  .instrument-grid { margin: 0; gap: 7px; }
+  .control-deck .instrument { border: 5px solid #dfe8ea; box-shadow: 0 2px 5px #718087, inset 0 0 0 2px #112333; }
+  .control-deck .power-control { padding-top: 0; }
+  .control-deck .power-housing { width: 100%; height: auto; padding: 5px; border: 5px solid #dfe8ea; background: #09131e; box-shadow: 0 2px 5px #718087, inset 0 0 0 2px #112333; }
+  .control-deck .power-button { border: 2px solid #00cc96; background: radial-gradient(circle at 50% 35%, #19433b, #06131b 70%); box-shadow: inset 0 0 18px #008f72, 0 0 10px #00cc96; }
+  .control-deck .power-button .power-bolt { width: 30px; height: 30px; color: #ffc12a; fill: #ffc12a; }
+  .control-deck .power-state { margin-top: -7px; color: #2be2b4; font-size: 7px; }
+  .control-deck .instrument-label { margin-top: -12px; color: #14283a; font-size: 7px; }
+  .telemetry-strip { margin: 12px 0 0; padding: 11px 0; border: 1px solid #5f6f75; border-radius: 8px; background: #07111b; }
+  .telemetry-strip > div { padding-left: 9px; }
+  .telemetry-strip strong { font-size: 13px; }
+  .section-heading { margin: 16px 0 7px; }
+  .section-heading > span:first-child { display: none; }
+  .manage-link { margin-left: auto; }
+  .active-server { height: 54px; padding: 8px 12px; gap: 8px; border-radius: 13px; background: linear-gradient(135deg, #17243b, #09111f); }
+  .server-flag { width: 31px; height: 30px; font-size: 18px; }
+  .active-server-name { gap: 2px; }
+  .active-server-name strong { font-size: 10px; }
+  .active-server-name small { font-size: 7px; }
+  .server-metrics { gap: 4px; }
+  .server-ping { display: none; }
+  .protocol-badge { padding: 3px 4px; font-size: 7px; }
+  .ai-tray { margin-top: 16px; padding: 15px 13px 12px; border-radius: 15px; background: linear-gradient(145deg, #344153, #151d2b); color: #fff; box-shadow: inset 0 2px 0 #718091, 0 4px 9px #89969b; }
+  .ai-tray .ai-heading { margin-bottom: 10px; }
+  .ai-tray .ai-heading .micro-label, .ai-tray .quick-actions, .ai-tray .api-field, .ai-tray .ai-security { display: none; }
+  .ai-tray .field-label { font-size: 8px; color: #ffc44b; }
+  .ai-tray .purpose-input-wrap { margin-top: 7px; }
+  .ai-tray .purpose-input { height: 40px; padding-left: 10px; font-size: 9px; background: #07111b; color: #fff; }
+  .ai-tray .purpose-input-wrap > svg { display: none; }
+  .ai-tray .ai-bottom { margin-top: 9px; }
+  .ai-tray .recommend-button { width: 100%; height: 34px; justify-content: center; font-size: 9px; }
+  .connection-footer, .chassis-footer, .below-chassis { font-size: 6px; }
+}
