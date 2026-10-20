@@ -78,7 +78,8 @@ h1, h2, h3, .brand-card-title, .brand-card-name, .gauge-value, .power-status { f
 .brand-card-subtitle { margin-top: 8px; color: #18222e; font-family: var(--font-mono); font-size: clamp(8px, 1.45vw, 11px); font-weight: 700; letter-spacing: .08em; white-space: nowrap; }.brand-card-subtitle b { color: #bc6f36; }
 .brand-card-footer { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-top: 12px; color: #18222e; font-family: var(--font-mono); font-size: 8px; letter-spacing: .03em; }.brand-card-footer strong { font-size: 9px; }
 .brand-card::before { position: absolute; z-index: -1; inset: -5px; border-radius: inherit; background: linear-gradient(110deg, #e9c9ae, #d8cdf0, #bfdfeb, #c4e5d4, #e9d9ab); content: ''; filter: blur(11px); opacity: .38; animation: brand-card-aura 4.8s ease-in-out infinite; }
-.brand-card-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 10px; background: linear-gradient(145deg, #fff8f1, #f2efff 54%, #edf8fa); color: var(--engrave-copper); }
+.brand-card-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 10px; background: linear-gradient(145deg, #fff8f1, #f2efff 54%, #edf8fa); color: var(--engrave-copper); object-fit: contain; }
+.brand-card-logo { width: clamp(42px, 7vw, 64px); height: clamp(42px, 7vw, 64px); flex: 0 0 auto; object-fit: contain; filter: drop-shadow(0 3px 5px rgb(25 41 58 / 28%)); }
 .brand-card-icon svg { width: 21px; height: 21px; stroke-width: 2; }
 .brand-card-name { color: var(--engrave-ink); font-family: var(--font-display); font-size: 24px; font-weight: 800; letter-spacing: -.04em; }
 .brand-card.compact { flex: initial; width: auto; min-height: 44px; margin-left: 0; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 11px; }
