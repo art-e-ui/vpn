@@ -362,6 +362,83 @@ h1 { font-weight: 800; font-size: 29px; color: var(--engrave-copper); text-shado
 .directory-row { padding: 12px; border: 1px solid var(--bevel); border-radius: 5px; background: var(--tray-gradient); box-shadow: var(--key-shadow); }
 .directory-node > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .directory-node strong, .directory-node small { display: block; }
+
+/* Compact dashboard treatment for narrow Android screens. */
+@media (max-width: 430px) {
+  .client-stage { padding: 8px 5px 18px; }
+  .outer-brand { margin-inline: 5px; gap: 8px; }
+  .outer-brand > span:first-child { font-size: 11px; }
+  .outer-brand .micro-label { font-size: 6px; white-space: nowrap; }
+  .client-chassis { padding: 18px 10px 0; border-radius: 8px; }
+  .client-header { padding: 8px 0 18px; gap: 8px; }
+  .brand-card { min-height: 43px; gap: 7px; padding: 5px 10px 5px 6px; border-radius: 10px; }
+  .brand-card-icon { width: 30px; height: 30px; border-radius: 8px; }
+  .brand-card-icon svg { width: 17px; height: 17px; }
+  .brand-card-name { font-size: 18px; }
+  .status-badge { min-width: 0; padding: 7px 8px; font-size: 8px; }
+  .instrument-nav { margin-bottom: 17px; }
+  .nav-key { height: 44px; font-size: 11px; }
+  .ai-tray { padding: 16px 12px 13px; }
+  .ai-heading { margin-bottom: 14px; }
+  .ai-heading .micro-label { display: none; }
+  .ai-badge { font-size: 14px; }
+  .field-label { font-size: 9px; line-height: 1.4; }
+  .purpose-input { height: 42px; font-size: 11px; }
+  .quick-actions { gap: 7px; margin: 9px 0 14px; }
+  .quick-chip { height: 30px; font-size: 9px; padding-inline: 7px; }
+  .ai-bottom { align-items: stretch; flex-direction: column; gap: 9px; }
+  .recommend-button { width: 100%; justify-content: center; }
+  .ai-security { font-size: 8px; line-height: 1.35; }
+  .section-heading { margin-top: 17px; }
+  .active-server { height: 72px; padding: 11px 12px; gap: 10px; }
+  .server-flag { width: 38px; height: 36px; font-size: 21px; }
+  .active-server-name strong { font-size: 13px; }
+  .active-server-name small { font-size: 8px; }
+  .server-metrics { gap: 5px; }
+  .server-ping { display: none; }
+  .protocol-badge { padding: 4px 5px; font-size: 8px; }
+  .control-deck { margin-top: 18px; padding: 18px 4px 0; }
+  .control-deck .deck-heading .micro-label { font-size: 7px; }
+  .control-deck .instrument-grid { margin-top: 13px; }
+  .power-housing { width: 84px; height: 84px; }
+  .power-button .power-bolt { width: 32px; height: 32px; }
+  .power-state { font-size: 6px; margin-top: 10px; white-space: nowrap; }
+  .connection-duration { font-size: 9px; }
+  .telemetry-strip { margin-inline: -1px; padding: 13px 0; gap: 11px 0; }
+  .telemetry-strip > div { padding-left: 12px; }
+  .telemetry-strip > div > span { font-size: 7px; }
+  .telemetry-strip strong { font-size: 16px; }
+  .connection-content { display: flex; flex-direction: column; }
+  .control-deck { order: 1; }
+  .telemetry-strip { order: 2; }
+  .section-heading { order: 3; }
+  .active-server { order: 4; }
+  .ai-tray { order: 5; margin-top: 18px; }
+  .connection-footer { order: 6; flex-direction: column; align-items: flex-start; gap: 7px; padding-block: 13px; }
+  .control-deck { border: 1px solid color-mix(in oklch, var(--deep-ink) 55%, transparent); border-radius: 15px; padding: 18px 9px 13px; background: linear-gradient(145deg, #b8c3c6, #d9e2e4 52%, #9ba8ac); box-shadow: inset 0 2px 6px #eef5f5, inset 0 -5px 9px #78868b, 0 4px 8px color-mix(in oklch, var(--deep-ink) 24%, transparent); }
+  .control-deck .deck-heading { padding-inline: 8px; }
+  .control-deck .instrument-grid { margin-top: 10px; }
+  .control-deck .instrument { background: #07111b; border: 6px solid #d7e0e2; border-radius: 50%; box-shadow: 0 2px 5px #647177, inset 0 0 0 2px #0d2635; aspect-ratio: 1; display: grid; place-items: center; }
+  .control-deck .gauge { width: 100%; }
+  .control-deck .power-control { background: #07111b; border: 6px solid #d7e0e2; border-radius: 50%; aspect-ratio: 1; padding: 6px 0 0; box-shadow: 0 2px 5px #647177, inset 0 0 0 2px #0d2635; }
+  .control-deck .power-housing { width: 100%; height: auto; aspect-ratio: 1; border: 0; padding: 5px; background: transparent; box-shadow: none; }
+  .control-deck .power-button { background: radial-gradient(circle at 50% 35%, #20463e, #07151a 68%); border: 2px solid #00c995; box-shadow: inset 0 0 18px #00a878, 0 0 10px #00c995; }
+  .control-deck .power-button .power-bolt { color: #ffc126; fill: #ffc126; filter: none; }
+  .control-deck .power-button-dot { display: none; }
+  .control-deck .power-state { color: #27dfb1; font-size: 8px; margin-top: -9px; z-index: 2; }
+  .control-deck .connection-duration { display: none; }
+  .control-deck .instrument-label { color: #0bd5ed; font-size: 7px; margin-top: -15px; z-index: 2; }
+  .telemetry-strip { margin-top: 13px; border: 1px solid #52646b; border-radius: 9px; background: #061018; box-shadow: inset 0 2px 8px #000; color: #dbe7e9; }
+  .telemetry-strip strong { color: #ffae21; font-family: var(--font-mono); }
+  .telemetry-strip > div:nth-child(2) strong, .telemetry-strip > div:nth-child(4) strong { color: #29dff2; }
+  .section-heading { margin-bottom: 7px; }
+  .active-server { border: 1px solid #192b45; border-radius: 16px; background: linear-gradient(135deg, #17233b, #080f1b); color: #eff6ff; box-shadow: inset 0 1px 0 #314565, 0 4px 8px #829095; }
+  .active-server-name small, .server-ping { color: #20d7ee; }
+  .ai-tray { border-color: #667c89; border-radius: 15px; background: linear-gradient(145deg, #344153, #151d2b); color: #f3f6f7; box-shadow: inset 0 2px 0 #718091, 0 4px 9px #829095; }
+  .ai-tray .field-label, .ai-tray .ai-security { color: #d9e1e4; }
+  .ai-tray .engraved-input, .ai-tray .api-field { background: #080f17; border-color: #091c27; color: #f4f7f7; box-shadow: inset 0 2px 6px #000; }
+  .ai-tray .copper-button { background: linear-gradient(#ffb21b, #da7600); color: #1a160b; }
+}
 .directory-node strong { font-size: 14px; }
 .directory-node small { font-size: 10px; margin-top: 4px; }
 .directory-rating { margin-top: 8px; gap: 2px; }
