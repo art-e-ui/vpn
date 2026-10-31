@@ -1,5 +1,10 @@
 package com.artesys.netcon
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Dns
@@ -52,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -95,15 +102,15 @@ private enum class DashboardTab(val label: String) {
 internal fun NetconDashboard(
     serverName: String,
     protocol: String,
-    serverLocation: String,
-    serverLatitude: Double?,
-    serverLongitude: Double?,
-    onSaveLocation: (String, Double, Double) -> Unit,
     feedback: String,
+    googleEmail: String,
+    authBusy: Boolean,
     onFeedbackDismiss: () -> Unit,
     onImport: (String) -> Boolean,
     onFetchPublicNodes: suspend (String) -> NativePublicDirectory.Result,
     onRecommend: suspend (String, String, List<NativePublicDirectory.Node>) -> NativeGeminiRecommender.Recommendation,
+    onGoogleSignIn: () -> Unit,
+    onGoogleSignOut: () -> Unit,
     onSelectPublicNode: (NativePublicDirectory.Node) -> Unit,
     onConnect: () -> Unit,
     onCopyLog: () -> Unit,
@@ -121,7 +128,6 @@ internal fun NetconDashboard(
     }
     var tab by rememberSaveable { mutableStateOf(DashboardTab.Connection) }
     var serverDialog by rememberSaveable { mutableStateOf(false) }
-    var locationDialog by rememberSaveable { mutableStateOf(false) }
     var purpose by rememberSaveable { mutableStateOf("") }
     var apiKey by remember { mutableStateOf("") }
     var recommendationMessage by remember { mutableStateOf("") }
@@ -143,11 +149,18 @@ internal fun NetconDashboard(
 
     fun askGemini() {
         if (recommendationBusy) return
+        if (googleEmail.isBlank()) {
+            recommendationMessage = "Sign in with Google before asking Gemini for a recommendation."
+            return
+        }
         if (apiKey.isBlank()) {
             recommendationMessage = "Enter your Gemini API key. It stays in this screen session."
             return
         }
-        if (Regex("(?i)^(vmess|vless|trojan|ss)://").containsMatchIn(purpose.trim())) {
+        if (purpose.trim().startsWith("{") || purpose.trim().startsWith("[") ||
+            Regex("(?i)(vmess|vless|trojan|ss)://|[\"']?(uuid|password|privateKey|alterId)[\"']?\\s*:")
+                .containsMatchIn(purpose.trim())
+        ) {
             recommendationMessage = "Paste configuration links into the local import field; credentials are never sent to Gemini."
             return
         }
@@ -157,14 +170,26 @@ internal fun NetconDashboard(
             try {
                 val result = withTimeout(25_000) { onFetchPublicNodes("") }
                 if (result.nodes.isEmpty()) throw IllegalStateException("No supported public servers were found in the top feed.")
-                recommendationMessage = "Asking Gemini to choose from ${minOf(result.nodes.size, 30)} of ${result.nodes.size} untrusted public servers…"
-                val recommendation = withTimeout(25_000) {
-                    onRecommend(purpose.trim(), apiKey, result.nodes)
+                val availableNodes = NativeGeminiRecommender.filterEnabledNodes(result.nodes, enabledProtocols)
+                if (availableNodes.isEmpty()) {
+                    throw IllegalStateException("Enable at least one server protocol in CONFIG before asking Gemini.")
                 }
-                val selected = result.nodes.firstOrNull { it.id == recommendation.nodeId }
+                recommendationMessage = "Asking Gemini to choose from ${availableNodes.size} enabled, untrusted public servers…"
+                val recommendation = withTimeout(25_000) {
+                    onRecommend(purpose.trim(), apiKey, availableNodes)
+                }
+                val selected = availableNodes.firstOrNull { it.id == recommendation.nodeId }
                     ?: throw IllegalStateException("Gemini selected a server outside the downloaded list.")
+                if (selected.protocol !in enabledProtocols) {
+                    throw IllegalStateException(
+                        "The recommended protocol was disabled during the request. Enable it in CONFIG and try again.",
+                    )
+                }
                 onSelectPublicNode(selected)
-                recommendationMessage = "${recommendation.reason} Imported locally; not connected. Public servers are untrusted and unmeasured."
+                dns = recommendation.dnsAddress
+                route = recommendation.routingMode
+                recommendationMessage =
+                    "${recommendation.reason} Imported locally. Suggested DNS ${recommendation.dnsAddress} and ${recommendation.routingMode} routing are selected in CONFIG; review before connecting. Public servers are untrusted and unmeasured."
             } catch (error: Exception) {
                 recommendationMessage = error.message ?: "Unable to get a Gemini recommendation."
             } finally {
@@ -207,26 +232,7 @@ internal fun NetconDashboard(
                     .padding(horizontal = 13.dp, vertical = 15.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.92f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color.White, Color(0xFFF2ECFA), Color(0xFFEAF6F2)),
-                            ),
-                        )
-                        .border(1.dp, Bevel, RoundedCornerShape(14.dp))
-                        .padding(horizontal = 18.dp, vertical = 11.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "AIV2Ray",
-                        color = Engrave,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                }
+                BrandPlate()
                 Spacer(Modifier.height(9.dp))
                 StatusBadge(vpnStatus.state)
                 Spacer(Modifier.height(14.dp))
@@ -241,11 +247,15 @@ internal fun NetconDashboard(
                         recommendationMessage = recommendationMessage,
                         recommendationBusy = recommendationBusy,
                         onAskGemini = ::askGemini,
+                        googleEmail = googleEmail,
+                        authBusy = authBusy,
+                        onGoogleSignIn = onGoogleSignIn,
+                        onGoogleSignOut = {
+                            apiKey = ""
+                            onGoogleSignOut()
+                        },
                         serverName = serverName,
                         protocol = protocol,
-                        serverLocation = serverLocation,
-                        serverLatitude = serverLatitude,
-                        serverLongitude = serverLongitude,
                         state = vpnStatus.state,
                         error = if (errorState) vpnStatus.error else feedback,
                         duration = duration,
@@ -254,7 +264,6 @@ internal fun NetconDashboard(
                         downloadMbps = downloadMbps,
                         uploadMbps = uploadMbps,
                         onOpenServers = { serverDialog = true },
-                        onSetLocation = { locationDialog = true },
                         onImport = { raw -> if (onImport(raw)) serverDialog = false },
                         onProtocolAllowed = { enabledProtocols.contains(protocol.lowercase(Locale.ROOT)) },
                         onConnect = onConnect,
@@ -307,19 +316,6 @@ internal fun NetconDashboard(
         )
     }
 
-    if (locationDialog) {
-        LocationDialog(
-            initialName = serverLocation,
-            initialLatitude = serverLatitude,
-            initialLongitude = serverLongitude,
-            onDismiss = { locationDialog = false },
-            onSave = { name, latitude, longitude ->
-                onSaveLocation(name, latitude, longitude)
-                locationDialog = false
-            },
-        )
-    }
-
 }
 
 @Composable
@@ -354,6 +350,91 @@ private fun StatusBadge(state: String) {
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
         )
+    }
+}
+
+@Composable
+private fun BrandPlate() {
+    val transition = rememberInfiniteTransition(label = "brand-plate")
+    val glow by transition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.42f,
+        animationSpec = infiniteRepeatable(tween(4800), RepeatMode.Reverse),
+        label = "brand-glow",
+    )
+    val wave by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(5800), RepeatMode.Restart),
+        label = "brand-wave",
+    )
+    val waveAlpha = when {
+        wave < 0.55f || wave >= 0.82f -> 0f
+        wave < 0.63f -> (wave - 0.55f) / 0.08f * 0.42f
+        else -> (1f - (wave - 0.63f) / 0.19f) * 0.42f
+    }.coerceIn(0f, 0.42f)
+    val waveScale = 0.94f + (wave - 0.55f).coerceIn(0f, 0.27f) / 0.27f * 0.14f
+    val brandGradient = Brush.linearGradient(
+        listOf(
+            Color(0xFFF0D7C5),
+            Color(0xFFE5DCF7),
+            Color(0xFFD2E9F3),
+            Color(0xFFD5ECDF),
+            Color(0xFFF2E7C9),
+        ),
+    )
+    val plateShape = RoundedCornerShape(14.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(66.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .scale(waveScale)
+                .alpha(waveAlpha)
+                .border(1.dp, brandGradient, RoundedCornerShape(24.dp)),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp)
+                .scale(1f + glow * 0.025f)
+                .alpha(glow * 0.35f)
+                .background(brandGradient, plateShape),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(plateShape)
+                .background(brandGradient)
+                .padding(1.dp)
+                .clip(plateShape)
+                .background(Tray)
+                .padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFFFFF8F1), Color(0xFFF2EFFF), Color(0xFFEDF8FA)))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = CopperDark, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "AIV2Ray",
+                color = Engrave,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+        }
     }
 }
 
@@ -405,11 +486,12 @@ private fun ConnectionScreen(
     recommendationMessage: String,
     recommendationBusy: Boolean,
     onAskGemini: () -> Unit,
+    googleEmail: String,
+    authBusy: Boolean,
+    onGoogleSignIn: () -> Unit,
+    onGoogleSignOut: () -> Unit,
     serverName: String,
     protocol: String,
-    serverLocation: String,
-    serverLatitude: Double?,
-    serverLongitude: Double?,
     state: String,
     error: String,
     duration: String,
@@ -420,7 +502,6 @@ private fun ConnectionScreen(
     onProtocolAllowed: () -> Boolean,
     onStartConfigured: () -> Unit,
     onOpenServers: () -> Unit,
-    onSetLocation: () -> Unit,
     onImport: (String) -> Unit,
     onConnect: () -> Unit,
     onCopyLog: () -> Unit,
@@ -437,6 +518,30 @@ private fun ConnectionScreen(
                     Spacer(Modifier.weight(1f))
                     EngravedText("LOCAL CONFIG ENGINE", 7)
                 }
+                if (googleEmail.isBlank()) {
+                    CopperButton(
+                        if (authBusy) "SIGNING IN…" else "SIGN IN WITH GOOGLE",
+                        Modifier.fillMaxWidth(),
+                        onClick = onGoogleSignIn,
+                    )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "GOOGLE · $googleEmail",
+                            color = Engrave,
+                            fontSize = 9.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onGoogleSignOut) {
+                            Text("SIGN OUT", color = CopperDark, fontSize = 9.sp)
+                        }
+                    }
+                }
+                Text(
+                    "Google sign-in verifies your identity only; it does not provide Gemini API access. Your separate Gemini key stays in this screen session.",
+                    color = Engrave,
+                    fontSize = 8.sp,
+                )
                 Text("WHAT DO YOU WANT TO USE THE VPN FOR?", color = Engrave, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 RecessedInput(
                     value = purpose,
@@ -518,13 +623,6 @@ private fun ConnectionScreen(
                     modifier = Modifier.border(1.dp, CopperDark, RoundedCornerShape(3.dp)).padding(horizontal = 5.dp, vertical = 3.dp))
             }
         }
-
-        WorldMapPanel(
-            locationName = serverLocation,
-            latitude = serverLatitude,
-            longitude = serverLongitude,
-            onSetLocation = onSetLocation,
-        )
 
         MetalPanel {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -628,7 +726,7 @@ private fun SettingsScreen(
                         Keycap(value, Modifier.weight(1f), selected = route == value) { onRouteChange(value) }
                     }
                 }
-                Text("Kill switch is controlled by Android. DNS, routing, and protocol preferences are presentation-only until connected configuration editing is enabled.", color = Engrave, fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
+                Text("DNS and routing choices are applied when you connect or reconnect. Android controls the VPN lockdown setting.", color = Engrave, fontSize = 9.sp, modifier = Modifier.padding(top = 10.dp))
             }
         }
         MetalPanel {
@@ -769,121 +867,6 @@ private fun PublicServerDialog(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Keycap("CANCEL", Modifier.weight(1f), onClick = onDismiss)
                 CopperButton("IMPORT LOCALLY", Modifier.weight(1f)) { onImport(raw.trim()) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorldMapPanel(
-    locationName: String,
-    latitude: Double?,
-    longitude: Double?,
-    onSetLocation: () -> Unit,
-) {
-    MetalPanel {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                SectionTitle("ACTIVE SERVER LOCATION")
-                Text("EDIT", color = CopperDark, fontSize = 8.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable(onClick = onSetLocation))
-            }
-            Canvas(
-                Modifier.fillMaxWidth().height(164.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Brush.verticalGradient(listOf(Color(0xFF252A30), Color(0xFF111519))))
-                    .border(1.dp, Shadow, RoundedCornerShape(4.dp)),
-            ) {
-                val mapColor = Color(0xFF5E6A70)
-                for (index in 1..5) {
-                    val x = size.width * index / 6f
-                    drawLine(Bevel.copy(alpha = 0.45f), Offset(x, 0f), Offset(x, size.height), strokeWidth = 0.6.dp.toPx())
-                }
-                for (index in 1..3) {
-                    val y = size.height * index / 4f
-                    drawLine(Bevel.copy(alpha = 0.45f), Offset(0f, y), Offset(size.width, y), strokeWidth = 0.6.dp.toPx())
-                }
-                val landmasses = listOf(
-                    listOf(.06f to .22f, .10f to .14f, .18f to .17f, .23f to .24f, .21f to .31f, .17f to .36f, .15f to .45f, .11f to .43f, .09f to .35f, .06f to .32f),
-                    listOf(.23f to .47f, .28f to .49f, .32f to .58f, .31f to .67f, .29f to .78f, .27f to .88f, .24f to .81f, .23f to .69f, .21f to .58f),
-                    listOf(.43f to .28f, .47f to .23f, .52f to .25f, .55f to .31f, .52f to .38f, .49f to .39f, .47f to .35f),
-                    listOf(.48f to .39f, .54f to .39f, .58f to .46f, .56f to .57f, .53f to .69f, .50f to .65f, .48f to .55f, .46f to .47f),
-                    listOf(.53f to .22f, .59f to .15f, .69f to .16f, .78f to .22f, .88f to .24f, .92f to .31f, .86f to .37f, .79f to .34f, .74f to .40f, .66f to .36f, .61f to .31f, .56f to .34f),
-                    listOf(.76f to .57f, .82f to .55f, .87f to .59f, .85f to .65f, .80f to .67f, .76f to .63f),
-                )
-                landmasses.forEach { points ->
-                    val path = Path().apply {
-                        points.forEachIndexed { index, point ->
-                            val x = size.width * point.first
-                            val y = size.height * point.second
-                            if (index == 0) moveTo(x, y) else lineTo(x, y)
-                        }
-                        close()
-                    }
-                    drawPath(path, Brush.verticalGradient(listOf(mapColor, Color(0xFF3D494F))))
-                    drawPath(path, CopperLight.copy(alpha = 0.22f), style = Stroke(width = 0.8.dp.toPx()))
-                }
-                if (latitude != null && longitude != null) {
-                    val x = size.width * ((longitude + 180.0) / 360.0).toFloat()
-                    val y = size.height * ((90.0 - latitude) / 180.0).toFloat()
-                    drawCircle(Copper.copy(alpha = 0.22f), radius = 13.dp.toPx(), center = Offset(x, y))
-                    drawCircle(CopperLight, radius = 5.dp.toPx(), center = Offset(x, y))
-                    drawCircle(DeepInk, radius = 2.dp.toPx(), center = Offset(x, y))
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(locationName.ifBlank { "LOCATION NOT PROVIDED" }, color = Engrave, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    val coordinates = if (latitude != null && longitude != null) {
-                        "%.4f°, %.4f°".format(latitude, longitude)
-                    } else {
-                        "No verified coordinates"
-                    }
-                    Text(coordinates, color = Engrave, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
-                }
-                Icon(Icons.Filled.Dns, contentDescription = null, tint = CopperDark, modifier = Modifier.size(18.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun LocationDialog(
-    initialName: String,
-    initialLatitude: Double?,
-    initialLongitude: Double?,
-    onDismiss: () -> Unit,
-    onSave: (String, Double, Double) -> Unit,
-) {
-    var name by rememberSaveable(initialName) { mutableStateOf(initialName) }
-    var latitude by rememberSaveable(initialLatitude) { mutableStateOf(initialLatitude?.toString().orEmpty()) }
-    var longitude by rememberSaveable(initialLongitude) { mutableStateOf(initialLongitude?.toString().orEmpty()) }
-    var error by rememberSaveable { mutableStateOf("") }
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(7.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFFADB3B9), Color(0xFF626A72), Color(0xFF383D43))))
-                .border(1.dp, Bevel, RoundedCornerShape(7.dp)).padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text("SERVER MAP LOCATION", color = Engrave, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text("Enter the location and coordinates reported by your server provider. These values stay on this device.", color = Engrave, fontSize = 10.sp)
-            RecessedInput(name, { name = it }, "Location name, e.g. Frankfurt, Germany")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RecessedInput(latitude, { latitude = it }, "Latitude", Modifier.weight(1f))
-                RecessedInput(longitude, { longitude = it }, "Longitude", Modifier.weight(1f))
-            }
-            if (error.isNotBlank()) Text(error, color = Offline, fontSize = 10.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Keycap("CANCEL", Modifier.weight(1f), onClick = onDismiss)
-                CopperButton("SAVE LOCATION", Modifier.weight(1f)) {
-                    val lat = latitude.toDoubleOrNull()
-                    val lon = longitude.toDoubleOrNull()
-                    if (name.isBlank() || lat == null || lon == null || lat !in -90.0..90.0 || lon !in -180.0..180.0) {
-                        error = "Enter a name and valid latitude/longitude."
-                    } else {
-                        onSave(name.trim(), lat, lon)
-                    }
-                }
             }
         }
     }

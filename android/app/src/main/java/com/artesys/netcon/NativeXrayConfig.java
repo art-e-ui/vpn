@@ -13,7 +13,52 @@ import java.util.Arrays;
 import java.util.Locale;
 
 final class NativeXrayConfig {
+    private static final String[] LAN_IP_RANGES = {
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "169.254.0.0/16",
+        "fc00::/7",
+        "fe80::/10"
+    };
+
     private NativeXrayConfig() {}
+
+    static String configuredXrayJson(String configText, String dnsAddress, String routingMode) throws Exception {
+        JSONObject config = new JSONObject(configText);
+        config.put("dns", new JSONObject().put("servers", new JSONArray().put(dnsAddress)));
+        JSONObject routing = config.optJSONObject("routing");
+        if (routing == null) routing = new JSONObject();
+        JSONArray rules = new JSONArray();
+        if ("Bypass LAN".equals(routingMode)) {
+            JSONArray lanRanges = new JSONArray();
+            for (String range : LAN_IP_RANGES) lanRanges.put(range);
+            rules.put(new JSONObject()
+                .put("type", "field")
+                .put("ip", lanRanges)
+                .put("outboundTag", "direct"));
+        } else if ("Rule-based".equals(routingMode)) {
+            JSONArray existing = routing.optJSONArray("rules");
+            if (existing != null) {
+                for (int index = 0; index < existing.length(); index++) rules.put(existing.get(index));
+            }
+        }
+        routing.put("rules", rules);
+        config.put("routing", routing);
+        return config.toString();
+    }
+
+    static JSONObject androidTunInbound(String dnsAddress) throws Exception {
+        return new JSONObject()
+            .put("tag", "tun")
+            .put("port", 0)
+            .put("protocol", "tun")
+            .put("settings", new JSONObject()
+                .put("name", "netcon0")
+                .put("MTU", 1500)
+                .put("gateway", new JSONArray().put("10.64.0.1/30").put("fd64:64::1/126"))
+                .put("DNS", new JSONArray().put(dnsAddress)));
+    }
 
     static ImportedServer fromInput(String input) throws Exception {
         if (input == null || input.trim().isEmpty()) {
@@ -253,10 +298,7 @@ final class NativeXrayConfig {
                 .put(new JSONObject().put("tag", "block").put("protocol", "blackhole").put("settings", new JSONObject())))
             .put("routing", new JSONObject()
                 .put("domainStrategy", "IPIfNonMatch")
-                .put("rules", new JSONArray().put(new JSONObject()
-                    .put("type", "field")
-                    .put("ip", new JSONArray().put("geoip:private"))
-                    .put("outboundTag", "direct"))));
+                .put("rules", new JSONArray()));
     }
 
     private static URI parseUri(String link) {

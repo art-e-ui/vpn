@@ -19,6 +19,60 @@ public final class NativeXrayConfigTest {
     }
 
     @Test
+    public void bypassLanUsesExplicitRangesWithoutGeoIpData() throws Exception {
+        NativeXrayConfig.ImportedServer imported = NativeXrayConfig.fromInput(
+            "vless://user-id@example.com:443");
+        org.json.JSONObject configured = new org.json.JSONObject(NativeXrayConfig.configuredXrayJson(
+            imported.config.toString(), "1.1.1.1", "Bypass LAN"));
+        org.json.JSONArray rules = configured.getJSONObject("routing").getJSONArray("rules");
+        org.json.JSONArray ranges = rules.getJSONObject(0).getJSONArray("ip");
+
+        assertEquals(6, ranges.length());
+        assertEquals("10.0.0.0/8", ranges.getString(0));
+        assertEquals("172.16.0.0/12", ranges.getString(1));
+        assertEquals("192.168.0.0/16", ranges.getString(2));
+        assertEquals("169.254.0.0/16", ranges.getString(3));
+        assertEquals("fc00::/7", ranges.getString(4));
+        assertEquals("fe80::/10", ranges.getString(5));
+        assertEquals("direct", rules.getJSONObject(0).getString("outboundTag"));
+        assertEquals("1.1.1.1", configured.getJSONObject("dns").getJSONArray("servers").getString(0));
+        org.junit.Assert.assertFalse(configured.toString().contains("geoip:"));
+    }
+
+    @Test
+    public void globalRoutingDoesNotRetainImportedRules() throws Exception {
+        String config = "{\"outbounds\":[{\"tag\":\"proxy\",\"protocol\":\"vless\"}],"
+            + "\"routing\":{\"rules\":[{\"type\":\"field\",\"ip\":[\"geoip:private\"]}]}}";
+        org.json.JSONObject configured = new org.json.JSONObject(
+            NativeXrayConfig.configuredXrayJson(config, "8.8.8.8", "Global"));
+
+        assertEquals(0, configured.getJSONObject("routing").getJSONArray("rules").length());
+    }
+
+    @Test
+    public void ruleBasedRoutingRetainsImportedRules() throws Exception {
+        String config = "{\"outbounds\":[{\"tag\":\"proxy\",\"protocol\":\"vless\"}],"
+            + "\"routing\":{\"rules\":[{\"type\":\"field\",\"domain\":[\"example.com\"]}]}}";
+        org.json.JSONObject configured = new org.json.JSONObject(
+            NativeXrayConfig.configuredXrayJson(config, "8.8.8.8", "Rule-based"));
+
+        assertEquals("example.com", configured.getJSONObject("routing").getJSONArray("rules")
+            .getJSONObject(0).getJSONArray("domain").getString(0));
+    }
+
+    @Test
+    public void androidTunInboundDoesNotRequirePrivilegedInterfaceLookup() throws Exception {
+        org.json.JSONObject inbound = NativeXrayConfig.androidTunInbound("1.1.1.1");
+        org.json.JSONObject settings = inbound.getJSONObject("settings");
+
+        assertEquals("tun", inbound.getString("protocol"));
+        assertEquals("netcon0", settings.getString("name"));
+        assertEquals(1500, settings.getInt("MTU"));
+        assertEquals("1.1.1.1", settings.getJSONArray("DNS").getString(0));
+        org.junit.Assert.assertFalse(settings.has("autoOutboundsInterface"));
+    }
+
+    @Test
     public void rejectsXrayJsonWithoutSupportedProxyOutbound() {
         assertThrows(IllegalArgumentException.class, () -> NativeXrayConfig.fromInput(
             "{\"outbounds\":[{\"protocol\":\"freedom\"}]}"));

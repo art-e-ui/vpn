@@ -4,6 +4,7 @@ import android.app.Activity
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.Intent
+import android.net.Uri
 import android.net.VpnService
 import android.os.Bundle
 import android.os.Build
@@ -12,13 +13,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 
@@ -26,11 +29,11 @@ class MainActivity : ComponentActivity() {
     private val preferences by lazy { getPreferences(MODE_PRIVATE) }
     private var savedConfig by mutableStateOf("")
     private var savedName by mutableStateOf("")
-    private var serverLocation by mutableStateOf("")
-    private var serverLatitude by mutableStateOf<Double?>(null)
-    private var serverLongitude by mutableStateOf<Double?>(null)
     private var feedback by mutableStateOf("")
+    private var googleEmail by mutableStateOf("")
+    private var authBusy by mutableStateOf(false)
     private var pendingConfig = ""
+    private var supabaseSession: NativeSupabaseAuth.Session? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,9 +44,6 @@ class MainActivity : ComponentActivity() {
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         savedConfig = preferences.getString("xray_config", "") ?: ""
         savedName = preferences.getString("server_name", "") ?: ""
-        serverLocation = preferences.getString("server_location", "") ?: ""
-        serverLatitude = preferences.getString("server_latitude", null)?.toDoubleOrNull()
-        serverLongitude = preferences.getString("server_longitude", null)?.toDoubleOrNull()
         setContent {
             val permissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult(),
@@ -81,28 +81,30 @@ class MainActivity : ComponentActivity() {
             NetconDashboard(
                 serverName = savedName,
                 protocol = protocolName(savedConfig),
-                serverLocation = serverLocation,
-                serverLatitude = serverLatitude,
-                serverLongitude = serverLongitude,
-                onSaveLocation = { name, latitude, longitude ->
-                    serverLocation = name
-                    serverLatitude = latitude
-                    serverLongitude = longitude
-                    preferences.edit()
-                        .putString("server_location", name)
-                        .putString("server_latitude", latitude.toString())
-                        .putString("server_longitude", longitude.toString())
-                        .apply()
-                },
                 feedback = feedback,
+                googleEmail = googleEmail,
+                authBusy = authBusy,
                 onFeedbackDismiss = { feedback = "" },
                 onImport = ::importConfiguration,
                 onFetchPublicNodes = { countryCode ->
                     withContext(Dispatchers.IO) { NativePublicDirectory.fetch(countryCode) }
                 },
                 onRecommend = { purpose, apiKey, nodes ->
-                    NativeGeminiRecommender.recommend(purpose, apiKey, nodes)
+                    try {
+                        NativeGeminiRecommender.recommend(
+                            purpose,
+                            apiKey,
+                            getSupabaseAccessToken(),
+                            nodes,
+                        )
+                    } catch (error: NativeSupabaseAuth.SessionExpiredException) {
+                        supabaseSession = null
+                        googleEmail = ""
+                        throw error
+                    }
                 },
+                onGoogleSignIn = ::signInWithGoogle,
+                onGoogleSignOut = ::signOutGoogle,
                 onSelectPublicNode = ::selectPublicNode,
                 onConnect = {
                     if (savedConfig.isBlank()) {
@@ -125,7 +127,7 @@ class MainActivity : ComponentActivity() {
                 onDisconnect = { disconnectVpn() },
                 onBlockedProtocol = { feedback = "Enable this server protocol in Settings before connecting." },
                 onStartConfigured = { dnsAddress, routingMode ->
-                    val config = configuredXrayJson(savedConfig, dnsAddress, routingMode)
+                    val config = NativeXrayConfig.configuredXrayJson(savedConfig, dnsAddress, routingMode)
                     startWithNotificationPermission(config)
                 },
                 onOpenVpnSettings = {
@@ -157,6 +159,14 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
+        val callback = intent.data
+        if (callback?.scheme == "com.artesys.netcon.client" &&
+            callback.host == "auth" &&
+            callback.path == "/callback"
+        ) {
+            completeGoogleSignIn(callback)
+            return
+        }
         val shared = when (intent.action) {
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
             Intent.ACTION_VIEW -> intent.dataString
@@ -165,10 +175,117 @@ class MainActivity : ComponentActivity() {
         if (!shared.isNullOrBlank()) importConfiguration(shared.trim())
     }
 
+    private fun signInWithGoogle() {
+        if (authBusy) return
+        if (BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_PUBLISHABLE_KEY.isBlank()) {
+            feedback = "Google sign-in is not configured in this build."
+            return
+        }
+        authBusy = true
+        feedback = "Opening Google sign-in…"
+        lifecycleScope.launch {
+            try {
+                val request = withContext(Dispatchers.IO) {
+                    NativeSupabaseAuth.createAuthorizationRequest(
+                        BuildConfig.SUPABASE_URL,
+                        BuildConfig.SUPABASE_PUBLISHABLE_KEY,
+                    )
+                }
+                preferences.edit().putString(PENDING_AUTH_VERIFIER, request.codeVerifier).apply()
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(request.url)))
+                feedback = "Complete sign-in in your browser."
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                preferences.edit().remove(PENDING_AUTH_VERIFIER).apply()
+                feedback = error.message ?: "Unable to start Google sign-in."
+            } finally {
+                authBusy = false
+            }
+        }
+    }
+
+    private fun completeGoogleSignIn(callback: Uri) {
+        val verifier = preferences.getString(PENDING_AUTH_VERIFIER, "").orEmpty()
+        preferences.edit().remove(PENDING_AUTH_VERIFIER).apply()
+        val code = callback.getQueryParameter("code").orEmpty()
+        if (verifier.isBlank() || code.isBlank() || callback.getQueryParameter("error") != null) {
+            feedback = "Google sign-in was cancelled or could not be verified. Please try again."
+            return
+        }
+        authBusy = true
+        lifecycleScope.launch {
+            try {
+                val session = withContext(Dispatchers.IO) {
+                    NativeSupabaseAuth.exchangeAuthorizationCode(
+                        BuildConfig.SUPABASE_URL,
+                        BuildConfig.SUPABASE_PUBLISHABLE_KEY,
+                        code,
+                        verifier,
+                    )
+                }
+                supabaseSession = session
+                googleEmail = session.email.ifBlank { "Google account" }
+                feedback = "Signed in with Google."
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                supabaseSession = null
+                googleEmail = ""
+                feedback = error.message ?: "Unable to complete Google sign-in."
+            } finally {
+                authBusy = false
+            }
+        }
+    }
+
+    private fun signOutGoogle() {
+        val session = supabaseSession
+        supabaseSession = null
+        googleEmail = ""
+        preferences.edit().remove(PENDING_AUTH_VERIFIER).apply()
+        feedback = "Signed out on this device."
+        if (session != null) {
+            lifecycleScope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        NativeSupabaseAuth.revokeSession(
+                            BuildConfig.SUPABASE_URL,
+                            BuildConfig.SUPABASE_PUBLISHABLE_KEY,
+                            session,
+                        )
+                    }
+                } catch (error: Exception) {
+                    if (error is CancellationException) throw error
+                    feedback = "Signed out on this device, but the remote session could not be revoked."
+                }
+            }
+        }
+    }
+
+    private suspend fun getSupabaseAccessToken(): String {
+        val current = supabaseSession
+            ?: throw IllegalStateException("Sign in with Google before requesting a recommendation.")
+        return try {
+            val refreshed = withContext(Dispatchers.IO) {
+                NativeSupabaseAuth.refreshIfNeeded(
+                    BuildConfig.SUPABASE_URL,
+                    BuildConfig.SUPABASE_PUBLISHABLE_KEY,
+                    current,
+                )
+            }
+            supabaseSession = refreshed
+            refreshed.accessToken
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            supabaseSession = null
+            googleEmail = ""
+            throw IllegalStateException("Your Google session expired. Sign in again.", error)
+        }
+    }
+
     private fun importConfiguration(raw: String): Boolean {
         return try {
             val imported = NativeXrayConfig.fromInput(raw)
-            saveServer(imported.config.toString(), imported.name, "")
+            saveServer(imported.config.toString(), imported.name)
             NetconVpnService.logDiagnostic("Configuration imported successfully")
             feedback = "Configuration saved on this device."
             true
@@ -180,21 +297,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun selectPublicNode(node: NativePublicDirectory.Node) {
-        val country = node.countryCode?.let { "${node.country} · source-reported" }.orEmpty()
-        saveServer(node.configJson, node.name, country)
+        saveServer(node.configJson, node.name)
         feedback = "Free public server imported. It is untrusted and has not been tested."
     }
 
-    private fun saveServer(config: String, name: String, location: String) {
+    private fun saveServer(config: String, name: String) {
         savedConfig = config
         savedName = name
-        serverLocation = location
-        serverLatitude = null
-        serverLongitude = null
         preferences.edit()
             .putString("xray_config", savedConfig)
             .putString("server_name", savedName)
-            .putString("server_location", serverLocation)
+            .remove("server_location")
             .remove("server_latitude")
             .remove("server_longitude")
             .apply()
@@ -248,24 +361,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun configuredXrayJson(config: String, dnsAddress: String, routingMode: String): String {
-        val root = JSONObject(config)
-        root.put("dns", JSONObject().put("servers", JSONArray().put(dnsAddress)))
-        val routing = root.optJSONObject("routing") ?: JSONObject()
-        val rules = JSONArray()
-        if (routingMode == "Bypass LAN") {
-            rules.put(JSONObject()
-                .put("type", "field")
-                .put("ip", JSONArray().put("geoip:private"))
-                .put("outboundTag", "direct"))
-        } else if (routingMode == "Rule-based") {
-            val existing = routing.optJSONArray("rules")
-            if (existing != null) {
-                for (index in 0 until existing.length()) rules.put(existing.get(index))
-            }
-        }
-        routing.put("rules", rules)
-        root.put("routing", routing)
-        return root.toString()
+    private companion object {
+        const val PENDING_AUTH_VERIFIER = "supabase_pending_auth_verifier"
     }
 }
