@@ -58,6 +58,7 @@ export const myanmar: Record<string, string> = {
   'DOWNLOAD': 'ဒေါင်းလုဒ်', 'UPLOAD': 'အပ်လုဒ်', 'DATA RECEIVED': 'လက်ခံရရှိသည့် ဒေတာ', 'DATA SENT': 'ပေးပို့သည့် ဒေတာ', 'Data received': 'လက်ခံရရှိသည့် ဒေတာ', 'Data sent': 'ပေးပို့သည့် ဒေတာ',
   'ZERO LOGS. ZERO COMPROMISE.': 'အသုံးပြုမှုမှတ်တမ်း မသိမ်းပါ။', 'LOCAL CONFIG ENGINE': 'စက်တွင်း CONFIG စနစ်', 'ENGINEERED FOR PRIVACY': 'ကိုယ်ရေးအချက်အလက်အတွက် ဖန်တီးထားသည်', 'WEB EDITION': 'ဝဘ်ဗားရှင်း',
   'Enter a purpose or choose a quick action.': 'ရည်ရွယ်ချက်ကို ရေးပါ သို့မဟုတ် အမြန်ရွေးချယ်မှုတစ်ခုကို ရွေးပါ။',
+  'Clear purpose': 'ရည်ရွယ်ချက်ကို ရှင်းရန်',
   'Configuration parsed locally and selected. Your credentials were not sent to Gemini.': 'Configuration ကို သင့်စက်ပေါ်တွင် ဖတ်ပြီး ရွေးချယ်ထားသည်။ သင့်အထောက်အထားများကို Gemini သို့ မပို့ထားပါ။',
   'Invalid link.': 'လင့်ခ် မမှန်ပါ။', 'Import a server from the directory or add your configuration first.': 'ဆာဗာစာရင်းမှ ထည့်သွင်းပါ သို့မဟုတ် သင့် configuration ကို အရင်ထည့်ပါ။',
   'Recommendation unavailable.': 'အကြံပြုချက် မရရှိနိုင်ပါ။', 'Unable to reach Gemini. Please try again.': 'Gemini ကို ဆက်သွယ်၍မရပါ။ ပြန်ကြိုးစားပါ။',
