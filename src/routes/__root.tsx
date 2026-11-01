@@ -79,14 +79,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#F5F6F8" },
       { title: "AIV2Ray" },
       { name: "description", content: "AIV2Ray — local V2Ray configuration, Gemini recommendations, and native Android VPN controls." },
       { property: "og:title", content: "AIV2Ray" },
       { property: "og:description", content: "AIV2Ray — local V2Ray configuration, Gemini recommendations, and native Android VPN controls." },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/file_00000000aafc81f89b7df4121aa4df24-HMBXCE5Z5UQDiRSDtdNHZP41CekAzA.png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/file_00000000aafc81f89b7df4121aa4df24-HMBXCE5Z5UQDiRSDtdNHZP41CekAzA.png" },
     ],
     links: [
       {
