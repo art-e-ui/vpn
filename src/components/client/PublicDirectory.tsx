@@ -1,6 +1,6 @@
 import { useLanguage } from '@/components/client/LanguageProvider';
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Star, Plus, ShieldAlert } from 'lucide-react';
+import { RefreshCw, Star, Plus, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { countryName, directorySource, fetchDirectory, ratingsKey, readRatings, sortDirectory, type DirectorySort, type Ratings } from '@/lib/server-directory';
 import type { Protocol, ServerNode } from '@/lib/v2ray';
@@ -32,7 +32,14 @@ export function PublicDirectory({ onImport, protocols }: { onImport: (node: Serv
     <div className="directory-attribution"><a href={directorySource.repository} target="_blank" rel="noreferrer">FastNodes ↗</a><Button variant="outline" size="icon" className="keycap" aria-label={t("Refresh public directory")} title={t("Refresh public directory")} disabled={busy} onClick={() => setRefresh(v => v + 1)}><RefreshCw className={busy ? 'animate-spin' : ''} /></Button></div>
     <p className="directory-warning"><ShieldAlert size={16} />{t("UNTRUSTED PUBLIC SERVERS · Operators may observe traffic. Availability and privacy are not guaranteed.")}</p>
     <div className="directory-controls"><label className="field-label">{t("LOCATION")}<select className="engraved-input" aria-label={t("Directory location")} value={country} onChange={e => setCountry(e.target.value)}><option value="">{t("Top feed · Unknown location")}</option>{['AE','AU','CA','DE','FI','FR','GB','HK','IN','IR','JP','KR','NL','SE','SG','TR','US'].map(code => <option key={code} value={code}>{countryName(code)} · {t('source-reported')}</option>)}</select></label><label className="field-label">{t("SORT")}<select className="engraved-input" aria-label={t("Directory sort")} value={sort} onChange={e => setSort(e.target.value as DirectorySort)}><option value="name">{t("Name")}</option><option value="location">{t("Location")}</option><option value="latency">{t("Latency · unmeasured last")}</option><option value="rating">{t("My rating")}</option></select></label></div>
-    <input className="engraved-input" aria-label={t("Search public servers")} placeholder={t("Search name, protocol or location")} value={search} onChange={e => { setSearch(e.target.value); setLimit(30); }} />
+    <div className="directory-search-wrap">
+      <input className="engraved-input directory-search-input" aria-label={t("Search public servers")} placeholder={t("Search name, protocol or location")} value={search} onChange={e => { setSearch(e.target.value); setLimit(30); }} />
+      {search && (
+        <Button variant="ghost" size="icon" className="directory-search-clear-btn" aria-label={t("Clear search")} onClick={() => { setSearch(''); setLimit(30); }}>
+          <X size={14} />
+        </Button>
+      )}
+    </div>
     <p className="directory-meta">{busy ? t('Loading public directory…') : summary}</p>
     <p className="directory-meta">{t("Device latency unmeasured · Android VPN service unavailable. Country feeds reflect the source’s location claims.")}</p>
     {error && <p className="ai-error" role="alert">{t(error)}</p>}
