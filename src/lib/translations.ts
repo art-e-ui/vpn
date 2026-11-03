@@ -138,6 +138,7 @@ export const myanmar: Record<string, string> = {
   "Location": "တည်နေရာ",
   "Latency · unmeasured last": "တုံ့ပြန်ချိန် · မတိုင်းတာရသေးသည်များ နောက်ဆုံး",
   "My rating": "ကျွန်ုပ်၏ အဆင့်သတ်မှတ်ချက်",
+  "Clear search": "ရှာဖွေမှု ရှင်းလင်းရန်",
   "Search public servers": "အများသုံးဆာဗာ ရှာရန်",
   "Search name, protocol or location": "အမည်၊ protocol သို့မဟုတ် တည်နေရာဖြင့် ရှာပါ",
   "Loading public directory…": "ဆာဗာစာရင်း တင်နေသည်…",
