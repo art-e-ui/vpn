@@ -7,8 +7,9 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Bundle
 import android.os.Build
-import android.view.View
 import androidx.activity.ComponentActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,10 +36,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         NetconVpnService.logDiagnostic("Application started")
-        window.statusBarColor = android.graphics.Color.rgb(245, 246, 248)
-        window.navigationBarColor = android.graphics.Color.rgb(245, 246, 248)
-        window.decorView.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = true
+        insetsController.isAppearanceLightNavigationBars = true
         savedConfig = preferences.getString("xray_config", "") ?: ""
         savedName = preferences.getString("server_name", "") ?: ""
         serverLocation = preferences.getString("server_location", "") ?: ""
