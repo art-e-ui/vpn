@@ -724,7 +724,7 @@ private fun PublicServerDialog(
             Text("FastNodes · public community feed. Servers are untrusted, may be unavailable, and have unmeasured latency.", color = Offline, fontSize = 9.sp)
             Box {
                 Keycap(
-                    if (countryCode.isEmpty()) "TOP FEED · UNKNOWN LOCATION" else "${Locale("", countryCode).displayCountry} · SOURCE-REPORTED",
+                    if (countryCode.isEmpty()) "TOP FEED · UNKNOWN LOCATION" else "${Locale.Builder().setRegion(countryCode).build().displayCountry} · SOURCE-REPORTED",
                     Modifier.fillMaxWidth(),
                     onClick = { countryMenu = true },
                 )
@@ -735,7 +735,7 @@ private fun PublicServerDialog(
                     )
                     NativePublicDirectory.countryCodes.forEach { code ->
                         DropdownMenuItem(
-                            text = { Text("${Locale("", code).displayCountry} · source-reported") },
+                            text = { Text("${Locale.Builder().setRegion(code).build().displayCountry} · source-reported") },
                             onClick = { countryCode = code; countryMenu = false },
                         )
                     }
