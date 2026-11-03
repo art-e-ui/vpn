@@ -1,8 +1,0 @@
-import { Globe2 } from 'lucide-react';
-export function Flag({ country }: { country: string }) {
-  if (country === 'Singapore') return <svg viewBox="0 0 30 20" aria-label="Singapore flag"><path fill="var(--destructive)" d="M0 0h30v10H0z" /><path fill="var(--foreground)" d="M0 10h30v10H0z" /><circle cx="7" cy="5" r="3.4" fill="var(--foreground)" /><circle cx="8.3" cy="4.2" r="2.9" fill="var(--destructive)" /><g fill="var(--foreground)">{[[12, 2.8], [14.8, 4.4], [14, 7.1], [11, 7.1], [10.3, 4.4]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r=".65" />)}</g></svg>;
-  if (country === 'Japan') return <svg viewBox="0 0 30 20" aria-label="Japan flag"><path fill="var(--foreground)" d="M0 0h30v20H0z" /><circle cx="15" cy="10" r="6" fill="var(--destructive)" /></svg>;
-  if (country === 'Germany') return <svg viewBox="0 0 30 21" aria-label="Germany flag"><path fill="var(--deep-ink)" d="M0 0h30v7H0z" /><path fill="var(--destructive)" d="M0 7h30v7H0z" /><path fill="var(--copper-highlight)" d="M0 14h30v7H0z" /></svg>;
-  if (country === 'United States') return <svg viewBox="0 0 30 20" aria-label="United States flag"><path fill="var(--foreground)" d="M0 0h30v20H0z" />{Array.from({ length: 7 }, (_, i) => <path key={i} fill="var(--destructive)" d={`M0 ${i * 3}h30v1.5H0z`} />)}<path fill="var(--bevel)" d="M0 0h13v11H0z" /><g fill="var(--foreground)">{Array.from({ length: 12 }, (_, i) => <circle key={i} cx={2 + i % 4 * 3} cy={2 + Math.floor(i / 4) * 3} r=".6" />)}</g></svg>;
-  return <Globe2 aria-label="Custom server" />;
-}

@@ -1,6 +1,13 @@
-# Netcon VPN
+# Netcon VPN (Android)
 
-The Android app is a native Jetpack Compose application using Android `VpnService` and the bundled Xray core. It does not load a WebView or package web assets. The repository also contains a separate browser client; it is not used to build the Android app.
+Netcon VPN is a native Android VPN application built with Jetpack Compose, Material 3, Android `VpnService`, and an embedded Xray core.
+
+## Project Structure
+
+- `android/`: Android native project (Kotlin, Jetpack Compose, Gradle).
+- `scripts/`: Build and dependency utility scripts (e.g. `fetch-android-core.sh` to download `libv2ray.aar`).
+- `docs/`: Technical documentation including release and architecture notes.
+- `assets/`: Application branding assets.
 
 ## Build Android debug APK and AAB
 

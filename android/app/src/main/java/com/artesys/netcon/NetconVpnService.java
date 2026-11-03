@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
-import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.VpnService;
@@ -68,6 +67,7 @@ public final class NetconVpnService extends VpnService {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private ParcelFileDescriptor vpnInterface;
+    private ConnectivityManager boundConnectivityManager;
     private final Runnable healthCheck = new Runnable() {
         @Override
         public void run() {
@@ -188,26 +188,14 @@ public final class NetconVpnService extends VpnService {
         try {
             logDiagnostic("Starting Android VPN tunnel");
             Network underlyingNetwork = getUnderlyingNetwork();
-            LinkProperties linkProperties = getSystemService(ConnectivityManager.class)
-                .getLinkProperties(underlyingNetwork);
-            String interfaceName = linkProperties == null ? null : linkProperties.getInterfaceName();
-            if (interfaceName == null || interfaceName.trim().isEmpty()) {
-                throw new IllegalStateException("The active network interface is unavailable.");
+            ConnectivityManager connectivity = getSystemService(ConnectivityManager.class);
+            if (connectivity == null) {
+                throw new IllegalStateException("Android network services are unavailable.");
             }
 
             JSONObject config = new JSONObject(configText);
             String dnsAddress = firstDnsAddress(config);
-            JSONObject tunSettings = new JSONObject()
-                .put("name", "netcon0")
-                .put("MTU", 1500)
-                .put("gateway", new JSONArray().put("10.64.0.1/30").put("fd64:64::1/126"))
-                .put("DNS", new JSONArray().put(dnsAddress))
-                .put("autoOutboundsInterface", interfaceName);
-            JSONArray inbounds = new JSONArray().put(new JSONObject()
-                .put("tag", "tun")
-                .put("port", 0)
-                .put("protocol", "tun")
-                .put("settings", tunSettings));
+            JSONArray inbounds = new JSONArray().put(NativeXrayConfig.androidTunInbound(dnsAddress));
             config.put("inbounds", inbounds);
             config.put("stats", new JSONObject());
             config.put("policy", new JSONObject()
@@ -232,6 +220,11 @@ public final class NetconVpnService extends VpnService {
             }
             logDiagnostic("Android VPN interface established");
             setUnderlyingNetworks(new Network[] { underlyingNetwork });
+            if (!connectivity.bindProcessToNetwork(underlyingNetwork)) {
+                throw new IllegalStateException("Android could not bind Xray traffic to the underlying network.");
+            }
+            boundConnectivityManager = connectivity;
+            logDiagnostic("Xray traffic bound to the underlying Android network");
 
             Seq.setContext(getApplicationContext());
             Libv2ray.initCoreEnv(getFilesDir().getAbsolutePath(), "");
@@ -278,6 +271,7 @@ public final class NetconVpnService extends VpnService {
                 }
                 coreController = null;
             }
+            unbindProcessNetwork();
             String message = safeMessage(error);
             logDiagnostic("VPN startup failed: " + diagnosticError(error));
             setState("error", message);
@@ -331,6 +325,7 @@ public final class NetconVpnService extends VpnService {
                 }
                 vpnInterface = null;
             }
+            unbindProcessNetwork();
             if (!"error".equals(state)) {
                 state = "disconnected";
                 errorMessage = "";
@@ -344,6 +339,15 @@ public final class NetconVpnService extends VpnService {
             previousSampleAt = 0;
             previousCoreReceivedBytes = 0;
             previousCoreSentBytes = 0;
+        }
+    }
+
+    private void unbindProcessNetwork() {
+        ConnectivityManager connectivity = boundConnectivityManager;
+        boundConnectivityManager = null;
+        if (connectivity != null && !connectivity.bindProcessToNetwork(null)) {
+            android.util.Log.e("NetconVpnService", "Unable to unbind the app process from the underlying network.");
+            logDiagnostic("Unable to unbind the app process from the underlying network");
         }
     }
 

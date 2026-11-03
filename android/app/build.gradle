@@ -4,6 +4,9 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 def releaseVersionName = (System.getenv("RELEASE_VERSION_NAME") ?: System.getenv("GITHUB_REF_NAME"))?.replaceFirst("^v", "") ?: "1.0"
 def releaseVersionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+def androidSupabaseUrl = System.getenv("ANDROID_SUPABASE_URL") ?: ""
+def androidSupabasePublishableKey = System.getenv("ANDROID_SUPABASE_PUBLISHABLE_KEY") ?: ""
+def recommendationBaseUrl = System.getenv("ANDROID_API_BASE_URL") ?: "https://vpn-henna-one.vercel.app"
 
 android {
     namespace = "com.artesys.netcon"
@@ -15,6 +18,9 @@ android {
         versionCode releaseVersionCode
         versionName releaseVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "String", "SUPABASE_URL", groovy.json.JsonOutput.toJson(androidSupabaseUrl)
+        buildConfigField "String", "SUPABASE_PUBLISHABLE_KEY", groovy.json.JsonOutput.toJson(androidSupabasePublishableKey)
+        buildConfigField "String", "RECOMMENDATION_BASE_URL", groovy.json.JsonOutput.toJson(recommendationBaseUrl)
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
@@ -25,6 +31,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     sourceSets {
         main {
