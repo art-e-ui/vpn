@@ -90,7 +90,7 @@ internal object NativePublicDirectory {
                 if (!seenConfigs.add(sha256(value))) continue
                 val id = UUID.randomUUID().toString()
                 val index = result.size + 1
-                val country = countryCode?.let { Locale("", it).displayCountry.ifBlank { it } } ?: "Unknown location"
+                val country = countryCode?.let { Locale.Builder().setRegion(it).build().displayCountry.ifBlank { it } } ?: "Unknown location"
                 result.add(
                     Node(
                         id = id,

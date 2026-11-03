@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 
 export const recommendServer = createServerFn({ method: 'POST' })
-  .inputValidator((data: unknown) => z.object({ purpose: z.string().trim().min(1).max(500), apiKey: z.string().max(250).optional(), servers: z.array(z.object({ id: z.string().max(100), name: z.string().max(100), protocol: z.string().max(20), ping: z.number() })).min(1).max(30) }).parse(data))
+  .validator((data: unknown) => z.object({ purpose: z.string().trim().min(1).max(500), apiKey: z.string().max(250).optional(), servers: z.array(z.object({ id: z.string().max(100), name: z.string().max(100), protocol: z.string().max(20), ping: z.number() })).min(1).max(30) }).parse(data))
   .handler(async ({ data }) => {
     const prompt = `Recommend one VPN configuration for this intent: ${data.purpose}. Available nodes: ${JSON.stringify(data.servers)}. These are simulated test nodes. Do not claim measured performance or a working VPN. Return JSON only with serverId (an exact available id) and reason (a concise 1-2 sentence protocol and latency explanation). Never output credentials.`;
     const ownKey = data.apiKey?.trim();
